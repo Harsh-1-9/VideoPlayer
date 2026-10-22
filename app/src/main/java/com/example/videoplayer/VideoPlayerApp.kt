@@ -1,3 +1,4 @@
+
 package com.example.videoplayer
 
 import androidx.compose.runtime.Composable
@@ -19,35 +20,68 @@ import com.example.videoplayer.viewmodel.VideoPlayerViewModel
 
 @Composable
 fun VideoPlayerApp() {
+
     val context = LocalContext.current
-    val viewModel: VideoPlayerViewModel = viewModel(
+
+    val videoPlayerViewModel: VideoPlayerViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
+
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return VideoPlayerViewModel(VideoRepository(context.applicationContext)) as T
+            override fun <T : ViewModel> create(
+                modelClass: Class<T>
+            ): T {
+                return VideoPlayerViewModel(
+                    VideoRepository(context.applicationContext)
+                ) as T
             }
         }
     )
+
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "splash") {
-        composable("splash") {
-            SplashScreen(navController = navController)
+    NavHost(
+        navController = navController,
+        startDestination = "splash"
+    ) {
+
+        // Animated splash screen shown when the app opens
+        composable(route = "splash") {
+            SplashScreen(
+                navController = navController
+            )
         }
-        composable("home") {
-            HomeScreen(navController = navController)
+
+        // Main home screen
+        composable(route = "home") {
+            HomeScreen(
+                navController = navController
+            )
         }
-        composable("localMedia") {
-            LocalMediaScreen(navController = navController, viewModel = viewModel)
+
+        // Browse videos stored on the device
+        composable(route = "localMedia") {
+            LocalMediaScreen(
+                navController = navController,
+                viewModel = videoPlayerViewModel
+            )
         }
+
+        // Play the selected video
         composable(
             route = "player/{videoId}",
-            arguments = listOf(navArgument("videoId") { type = NavType.LongType })
+            arguments = listOf(
+                navArgument("videoId") {
+                    type = NavType.LongType
+                }
+            )
         ) { backStackEntry ->
-            val videoId = backStackEntry.arguments?.getLong("videoId") ?: 0L
+
+            val videoId =
+                backStackEntry.arguments?.getLong("videoId") ?: 0L
+
             PlayerScreen(
                 videoId = videoId,
-                viewmodel = viewModel,
+                viewmodel = videoPlayerViewModel,
                 navController = navController
             )
         }
