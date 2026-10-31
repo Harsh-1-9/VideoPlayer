@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.videoplayer"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -49,26 +50,30 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    // navigation
+
+    // Navigation with animation support
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // kotlin seralization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
+    // Compose Animation (explicit for scaleIn/scaleOut)
+    implementation("androidx.compose.animation:animation:1.7.0")
 
-    //Media 3
-    implementation("androidx.media3:media3-exoplayer:1.11.1")
-    implementation("androidx.media3:media3-ui:1.11.1")
-    implementation("androidx.media3:media3-common:1.11.1")
+    // Kotlin coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // viewmodel-compose
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    // Media3 ExoPlayer
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+    implementation("androidx.media3:media3-common:1.4.1")
 
-    //coil
+    // ViewModel + Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
+    // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // permission
+    // Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
 
-    // Icon
-    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+    // Material Icons Extended (for all icons)
+    implementation("androidx.compose.material:material-icons-extended:1.7.0")
 }

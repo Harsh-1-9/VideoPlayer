@@ -18,8 +18,8 @@ class VideoRepository(private val context: Context) {
             MediaStore.Video.Media.DURATION,
             MediaStore.Video.Media.SIZE,
             MediaStore.Video.Media.DATE_ADDED,
-            MediaStore.Video.Media.MIME_TYPE
-
+            MediaStore.Video.Media.MIME_TYPE,
+            MediaStore.Video.Media.BUCKET_DISPLAY_NAME
         )
         val sortOrder = "${MediaStore.Video.Media.DATE_ADDED} DESC"
         context.contentResolver.query(
@@ -35,6 +35,8 @@ class VideoRepository(private val context: Context) {
             val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE)
             val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_ADDED)
             val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.MIME_TYPE)
+            val bucketCol = cursor.getColumnIndex(MediaStore.Video.Media.BUCKET_DISPLAY_NAME)
+
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
                 val name = cursor.getString(nameCol) ?: "Untitled"
@@ -42,6 +44,12 @@ class VideoRepository(private val context: Context) {
                 val size = cursor.getLong(sizeCol)
                 val dateAdded = cursor.getLong(dateCol)
                 val mimeType = cursor.getString(mimeCol)
+                val folder = if (bucketCol != -1) {
+                    cursor.getString(bucketCol) ?: "Videos"
+                } else {
+                    "Videos"
+                }
+
                 val contentUri = ContentUris.withAppendedId(
                     MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
                     id
@@ -53,7 +61,8 @@ class VideoRepository(private val context: Context) {
                     duration = duration,
                     size = size,
                     dateAdded = dateAdded,
-                    mimeType = mimeType
+                    mimeType = mimeType,
+                    folderName = folder
                 )
             }
         }
