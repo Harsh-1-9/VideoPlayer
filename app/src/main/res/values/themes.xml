@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Luxury dark window for Compose — no title bar, transparent bars -->
+    <!-- Dark window for Compose, no title bar, transparent system bars -->
     <style name="Theme.VideoPlayer" parent="android:Theme.DeviceDefault.NoActionBar">
-        <item name="android:windowBackground">@color/luxury_black</item>
+        <item name="android:windowBackground">@color/app_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>

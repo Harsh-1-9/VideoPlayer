@@ -4,40 +4,33 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-private val LuxuryColorScheme = darkColorScheme(
-    primary            = GoldPrimary,
-    onPrimary          = LuxuryBlack,
-    primaryContainer   = GoldSubtle,
-    onPrimaryContainer = GoldLight,
+private val DarkColorScheme = darkColorScheme(
+    primary = PrimaryColor,
+    onPrimary = TextPrimary,
+    primaryContainer = PrimarySubtle,
+    onPrimaryContainer = PrimaryLight,
 
-    secondary          = PlatinumMid,
-    onSecondary        = LuxuryBlack,
-    secondaryContainer = PlatinumSubtle,
-    onSecondaryContainer = PlatinumLight,
+    secondary = PrimaryLight,
+    onSecondary = AppBackground,
 
-    tertiary           = GoldLight,
-    onTertiary         = LuxuryBlack,
+    background = AppBackground,
+    onBackground = TextPrimary,
 
-    background         = LuxuryBlack,
-    onBackground       = PlatinumLight,
+    surface = AppSurface,
+    onSurface = TextPrimary,
+    surfaceVariant = AppSurfaceCard,
+    onSurfaceVariant = TextSecondary,
 
-    surface            = LuxuryDarkSurface,
-    onSurface          = PlatinumLight,
-    surfaceVariant     = LuxuryCardSurface,
-    onSurfaceVariant   = PlatinumMid,
-
-    outline            = PlatinumDark,
-    outlineVariant     = GlassBorder,
-
-    error              = ErrorRed,
-    onError            = LuxuryBlack,
+    outline = BorderColor,
+    error = ErrorRed,
+    onError = TextPrimary
 )
 
 @Composable
 fun VideoPlayerTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = LuxuryColorScheme,
-        typography  = LuxuryTypography,
-        content     = content
+        colorScheme = DarkColorScheme,
+        typography = AppTypography,
+        content = content
     )
 }

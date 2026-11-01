@@ -1,31 +1,53 @@
 package com.example.videoplayer.presentation
 
 import android.Manifest
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.os.Build
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import android.util.Size
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.*
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.videoplayer.data.model.LocalVideo
 import com.example.videoplayer.ui.theme.*
-import com.google.accompanist.permissions.*
+import com.example.videoplayer.utils.formatDuration
+import com.example.videoplayer.utils.formatFileSize
+import com.example.videoplayer.viewmodel.VideoPlayerViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen(
+    navController: NavHostController,
+    viewModel: VideoPlayerViewModel
+) {
 
     val permissionState = rememberMultiplePermissionsState(
         permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -35,478 +57,514 @@ fun HomeScreen(navController: NavHostController) {
         }
     )
 
-    /* ── Entrance animations ── */
-    val headerAlpha  = remember { Animatable(0f) }
-    val headerOffset = remember { Animatable(40f) }
-    val cardAlpha    = remember { Animatable(0f) }
-    val cardOffset   = remember { Animatable(60f) }
-
-    LaunchedEffect(Unit) {
-        headerAlpha.animateTo(1f, tween(700, easing = EaseOut))
-        headerOffset.animateTo(0f, tween(700, easing = EaseOutCubic))
-    }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(200)
-        cardAlpha.animateTo(1f, tween(700, easing = EaseOut))
-        cardOffset.animateTo(0f, tween(700, easing = EaseOutCubic))
+    LaunchedEffect(permissionState.allPermissionsGranted) {
+        if (permissionState.allPermissionsGranted) {
+            viewModel.loadLocalVideo()
+        }
     }
 
-    /* ── Ambient glow pulse ── */
-    val infinite = rememberInfiniteTransition(label = "home")
-    val glowAlpha by infinite.animateFloat(
-        0.3f, 0.7f,
-        infiniteRepeatable(tween(3000, easing = EaseInOut), RepeatMode.Reverse),
-        label = "glowAlpha"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF080700),
-                        LuxuryBlack,
-                        Color(0xFF080700)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Video Player",
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        fontSize = 20.sp
                     )
+                },
+                actions = {
+                    if (permissionState.allPermissionsGranted) {
+                        IconButton(
+                            onClick = { navController.navigate("gallery") }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = TextPrimary
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = AppSurface
                 )
             )
-    ) {
-
-        /* ── Background glow blob ── */
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .offset(x = (-80).dp, y = (-60).dp)
-                .blur(120.dp)
-                .background(
-                    GoldPrimary.copy(alpha = glowAlpha * 0.08f),
-                    CircleShape
-                )
-        )
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .align(Alignment.BottomEnd)
-                .offset(x = 60.dp, y = 60.dp)
-                .blur(100.dp)
-                .background(
-                    GoldDark.copy(alpha = glowAlpha * 0.06f),
-                    CircleShape
-                )
-        )
-
+        },
+        containerColor = AppBackground
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(top = 60.dp, start = 24.dp, end = 24.dp, bottom = 40.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
 
-            /* ── Header ── */
-            Column(
-                modifier = Modifier
-                    .alpha(headerAlpha.value)
-                    .offset(y = headerOffset.value.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // App icon mark
-                Box(
+            // Permission Request Card
+            if (!permissionState.allPermissionsGranted) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = AppSurfaceCard),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
-                        .size(72.dp)
-                        .background(GoldSubtle, CircleShape)
-                        .border(1.dp, GoldPrimary.copy(alpha = 0.4f), CircleShape),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(38.dp),
-                        tint = GoldPrimary
-                    )
-                }
-
-                Spacer(Modifier.height(20.dp))
-
-                Text(
-                    text = "LUXE PLAYER",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = GoldPrimary,
-                    letterSpacing = 4.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(6.dp))
-
-                // Gold divider
-                Box(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .height(1.dp)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(Color.Transparent, GoldPrimary, Color.Transparent)
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(PrimarySubtle, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.FolderSpecial,
+                                    contentDescription = null,
+                                    tint = PrimaryLight,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Permission Required",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
                             )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Grant storage access to scan and play video files stored on your device.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
                         )
-                )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = { permissionState.launchMultiplePermissionRequest() },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Grant Permission", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            } else {
+                // Storage / Media Overview Card
+                val totalVideos = viewModel.localVideos.size
+                val totalSizeFormatted = formatFileSize(viewModel.localVideos.sumOf { it.size })
+                val totalAlbums = viewModel.videoFolders.size
 
-                Spacer(Modifier.height(10.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = AppSurfaceCard),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Storage Overview",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = totalSizeFormatted,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = PrimaryLight
+                            )
+                        }
 
-                Text(
-                    text = "Browse & play your videos with style",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PlatinumMid,
-                    textAlign = TextAlign.Center
-                )
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            StatPill(
+                                icon = Icons.Default.Movie,
+                                value = "$totalVideos",
+                                label = "Videos"
+                            )
+                            StatPill(
+                                icon = Icons.Default.Folder,
+                                value = "$totalAlbums",
+                                label = "Albums"
+                            )
+                            StatPill(
+                                icon = Icons.Default.SdStorage,
+                                value = totalSizeFormatted,
+                                label = "Total Size"
+                            )
+                        }
+                    }
+                }
             }
 
-            Spacer(Modifier.height(48.dp))
+            // Section 1: Browse Library
+            Text(
+                text = "Browse Library",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
 
-            /* ── Section Label ── */
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "MEDIA LIBRARY",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = GoldPrimary,
-                    letterSpacing = 2.sp,
-                    modifier = Modifier
-                        .alpha(cardAlpha.value)
-                        .offset(y = cardOffset.value.dp)
+                HomeFeatureCard(
+                    title = "Video Gallery",
+                    subtitle = "Albums & Grid View",
+                    icon = Icons.Default.GridView,
+                    accentColor = PrimaryColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        if (permissionState.allPermissionsGranted) {
+                            navController.navigate("gallery")
+                        } else {
+                            permissionState.launchMultiplePermissionRequest()
+                        }
+                    }
                 )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp)
-                        .height(1.dp)
-                        .alpha(cardAlpha.value)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(GoldPrimary.copy(0.4f), Color.Transparent)
-                            )
-                        )
+
+                HomeFeatureCard(
+                    title = "All Videos",
+                    subtitle = "List View",
+                    icon = Icons.Default.VideoLibrary,
+                    accentColor = PrimaryColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        if (permissionState.allPermissionsGranted) {
+                            navController.navigate("localMedia")
+                        } else {
+                            permissionState.launchMultiplePermissionRequest()
+                        }
+                    }
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            /* ── Video Gallery Card (NEW) ── */
-            LuxuryMediaCard(
-                icon = Icons.Default.Collections,
-                title = "Video Gallery",
-                subtitle = if (permissionState.allPermissionsGranted)
-                    "Browse videos by albums, folders & grid view"
-                else
-                    "Tap to allow access & view gallery",
-                badge = "GALLERY",
-                badgeGold = true,
-                modifier = Modifier
-                    .alpha(cardAlpha.value)
-                    .offset(y = cardOffset.value.dp),
-                onClick = {
-                    if (permissionState.allPermissionsGranted) {
-                        navController.navigate("gallery")
-                    } else {
-                        permissionState.launchMultiplePermissionRequest()
-                    }
-                }
+            // Section 2: Quick Filters
+            Text(
+                text = "Quick Filters",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
             )
 
-            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                QuickFilterCard(
+                    title = "HD Videos",
+                    subtitle = "1080p+",
+                    icon = Icons.Default.Hd,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        if (permissionState.allPermissionsGranted) {
+                            navController.navigate("gallery/hd")
+                        } else {
+                            permissionState.launchMultiplePermissionRequest()
+                        }
+                    }
+                )
 
-            /* ── Local Media Card ── */
-            LuxuryMediaCard(
-                icon = Icons.Default.VideoLibrary,
-                title = "All Videos List",
-                subtitle = if (permissionState.allPermissionsGranted)
-                    "Browse all videos in a clean list view"
-                else
-                    "Tap to grant access to your media",
-                badge = if (permissionState.allPermissionsGranted) "READY" else "PERMISSION",
-                badgeGold = permissionState.allPermissionsGranted,
-                modifier = Modifier
-                    .alpha(cardAlpha.value)
-                    .offset(y = cardOffset.value.dp),
-                onClick = {
-                    if (permissionState.allPermissionsGranted) {
-                        navController.navigate("localMedia")
-                    } else {
-                        permissionState.launchMultiplePermissionRequest()
+                QuickFilterCard(
+                    title = "Recent Videos",
+                    subtitle = "Newly Added",
+                    icon = Icons.Default.History,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        if (permissionState.allPermissionsGranted) {
+                            navController.navigate("gallery/recent")
+                        } else {
+                            permissionState.launchMultiplePermissionRequest()
+                        }
+                    }
+                )
+            }
+
+            // Section 3: recent videos
+            if (permissionState.allPermissionsGranted && viewModel.localVideos.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Recent Activity",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+
+                    TextButton(onClick = { navController.navigate("gallery/recent") }) {
+                        Text("See All", color = PrimaryLight, fontSize = 13.sp)
                     }
                 }
-            )
 
-            Spacer(Modifier.height(16.dp))
-
-            /* ── Quick Access card ── */
-            LuxuryStatsCard(
-                modifier = Modifier
-                    .alpha(cardAlpha.value)
-                    .offset(y = cardOffset.value.dp),
-                onAllVideosClick = {
-                    if (permissionState.allPermissionsGranted) {
-                        navController.navigate("localMedia")
-                    } else {
-                        permissionState.launchMultiplePermissionRequest()
-                    }
-                },
-                onHdContentClick = {
-                    if (permissionState.allPermissionsGranted) {
-                        navController.navigate("gallery/hd")
-                    } else {
-                        permissionState.launchMultiplePermissionRequest()
-                    }
-                },
-                onRecentClick = {
-                    if (permissionState.allPermissionsGranted) {
-                        navController.navigate("gallery/recent")
-                    } else {
-                        permissionState.launchMultiplePermissionRequest()
+                val recentPreview = viewModel.localVideos.take(6)
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(recentPreview) { video ->
+                        HomeRecentVideoCard(
+                            video = video,
+                            onClick = { navController.navigate("player/${video.id}") }
+                        )
                     }
                 }
-            )
+            }
         }
     }
 }
 
 @Composable
-private fun LuxuryMediaCard(
+private fun StatPill(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String,
+    label: String
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = PrimaryLight,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = TextSecondary,
+            fontSize = 11.sp
+        )
+    }
+}
+
+@Composable
+private fun HomeFeatureCard(
     title: String,
     subtitle: String,
-    badge: String,
-    badgeGold: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accentColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val isHovered by interactionSource.collectIsPressedAsState()
-
-    val elevation by animateDpAsState(
-        if (isHovered) 0.dp else 4.dp,
-        label = "elevation"
-    )
-    val scale by animateFloatAsState(
-        if (isHovered) 0.97f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "scale"
-    )
-
-    Box(
+    Card(
         modifier = modifier
-            .fillMaxWidth()
-            .scale(scale)
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF1A1600),
-                        Color(0xFF120F00),
-                        Color(0xFF1A1600)
-                    ),
-                    start = Offset(0f, 0f),
-                    end   = Offset(1000f, 600f)
-                )
-            )
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(
-                        GoldPrimary.copy(0.6f),
-                        GoldPrimary.copy(0.1f),
-                        GoldPrimary.copy(0.3f)
-                    )
-                ),
-                shape = RoundedCornerShape(20.dp)
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = AppSurfaceCard),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
+                .padding(16.dp)
                 .fillMaxWidth()
-                .padding(24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Icon box
             Box(
                 modifier = Modifier
-                    .size(60.dp)
-                    .background(GoldSubtle, RoundedCornerShape(16.dp))
-                    .border(1.dp, GoldPrimary.copy(0.3f), RoundedCornerShape(16.dp)),
+                    .size(44.dp)
+                    .background(accentColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(30.dp),
-                    tint = GoldPrimary
+                    tint = accentColor,
+                    modifier = Modifier.size(22.dp)
                 )
             }
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
 
-            Column(modifier = Modifier.weight(1f)) {
+@Composable
+private fun QuickFilterCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = AppSurfaceCard),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(PrimarySubtle, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = PrimaryLight,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = PlatinumLight,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
                 )
-                Spacer(Modifier.height(4.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PlatinumDark
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontSize = 10.sp
                 )
-                Spacer(Modifier.height(10.dp))
-                // Badge
-                Box(
-                    modifier = Modifier
-                        .background(
-                            if (badgeGold) GoldSubtle else PlatinumSubtle,
-                            RoundedCornerShape(4.dp)
-                        )
-                        .border(
-                            0.5.dp,
-                            if (badgeGold) GoldPrimary.copy(0.5f) else PlatinumDark.copy(0.5f),
-                            RoundedCornerShape(4.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = badge,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (badgeGold) GoldLight else PlatinumMid,
-                        letterSpacing = 1.5.sp
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeRecentVideoCard(
+    video: LocalVideo,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    var thumbnail by remember { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(video.id) {
+        val bmp = withContext(Dispatchers.IO) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    context.contentResolver.loadThumbnail(video.uri, Size(280, 180), null)
+                } else {
+                    val retriever = MediaMetadataRetriever()
+                    retriever.setDataSource(context, video.uri)
+                    val frame = retriever.getFrameAtTime(1_000_000)
+                    retriever.release()
+                    frame
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+        thumbnail = bmp
+    }
+
+    Card(
+        modifier = Modifier
+            .width(150.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = AppSurfaceCard),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .background(AppSurface),
+                contentAlignment = Alignment.Center
+            ) {
+                if (thumbnail != null) {
+                    Image(
+                        bitmap = thumbnail!!.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PlayCircle,
+                        contentDescription = null,
+                        tint = TextMuted,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                if (video.duration > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(4.dp)
+                            .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = formatDuration(video.duration),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextPrimary,
+                            fontSize = 9.sp
+                        )
+                    }
                 }
             }
 
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = GoldPrimary.copy(0.7f),
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun LuxuryStatsCard(
-    modifier: Modifier = Modifier,
-    onAllVideosClick: () -> Unit = {},
-    onHdContentClick: () -> Unit = {},
-    onRecentClick: () -> Unit = {}
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        LuxuryCardSurface,
-                        LuxuryElevated
-                    )
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    text = video.title.removeSuffix(".mp4").removeSuffix(".mkv"),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            )
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "QUICK ACCESS",
-                style = MaterialTheme.typography.labelMedium,
-                color = GoldPrimary,
-                letterSpacing = 2.sp
-            )
-            Spacer(Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                QuickStat(
-                    icon = Icons.Default.Movie,
-                    label = "All Videos",
-                    onClick = onAllVideosClick
-                )
-                QuickStat(
-                    icon = Icons.Default.Hd,
-                    label = "HD Content",
-                    onClick = onHdContentClick
-                )
-                QuickStat(
-                    icon = Icons.Default.AccessTime,
-                    label = "Recent",
-                    onClick = onRecentClick
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = formatFileSize(video.size),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontSize = 10.sp
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun QuickStat(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit = {}
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        if (isPressed) 0.88f else 1f,
-        spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "quickStatScale"
-    )
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(52.dp)
-                .background(
-                    if (isPressed) GoldSubtle else PlatinumSubtle,
-                    CircleShape
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isPressed) GoldPrimary else GlassBorder,
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(24.dp),
-                tint = if (isPressed) GoldLight else GoldPrimary
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Medium,
-            color = if (isPressed) GoldLight else PlatinumLight
-        )
     }
 }

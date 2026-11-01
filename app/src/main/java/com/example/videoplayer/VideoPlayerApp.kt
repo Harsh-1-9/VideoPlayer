@@ -1,4 +1,3 @@
-
 package com.example.videoplayer
 
 import androidx.compose.animation.*
@@ -42,26 +41,10 @@ fun VideoPlayerApp() {
     NavHost(
         navController    = navController,
         startDestination = "splash",
-        enterTransition  = {
-            fadeIn(tween(400)) + slideInHorizontally(
-                tween(400, easing = EaseOutCubic)
-            ) { it / 4 }
-        },
-        exitTransition   = {
-            fadeOut(tween(300)) + slideOutHorizontally(
-                tween(300, easing = EaseInCubic)
-            ) { -it / 4 }
-        },
-        popEnterTransition = {
-            fadeIn(tween(400)) + slideInHorizontally(
-                tween(400, easing = EaseOutCubic)
-            ) { -it / 4 }
-        },
-        popExitTransition  = {
-            fadeOut(tween(300)) + slideOutHorizontally(
-                tween(300, easing = EaseInCubic)
-            ) { it / 4 }
-        }
+        enterTransition    = { fadeIn(tween(200)) },
+        exitTransition     = { fadeOut(tween(200)) },
+        popEnterTransition = { fadeIn(tween(200)) },
+        popExitTransition  = { fadeOut(tween(200)) }
     ) {
 
         composable(route = "splash") {
@@ -69,7 +52,10 @@ fun VideoPlayerApp() {
         }
 
         composable(route = "home") {
-            HomeScreen(navController = navController)
+            HomeScreen(
+                navController = navController,
+                viewModel = videoPlayerViewModel
+            )
         }
 
         composable(route = "localMedia") {
@@ -79,7 +65,7 @@ fun VideoPlayerApp() {
             )
         }
 
-        // Luxury Video Gallery: Albums & Grid View
+        // Gallery: albums & grid view
         composable(route = "gallery") {
             GalleryScreen(
                 navController = navController,
@@ -101,25 +87,7 @@ fun VideoPlayerApp() {
 
         composable(
             route     = "player/{videoId}",
-            arguments = listOf(navArgument("videoId") { type = NavType.LongType }),
-            enterTransition = {
-                fadeIn(tween(600)) + scaleIn(
-                    tween(600, easing = EaseOutCubic),
-                    initialScale = 0.92f
-                )
-            },
-            exitTransition = {
-                fadeOut(tween(400)) + scaleOut(
-                    tween(400, easing = EaseInCubic),
-                    targetScale = 0.92f
-                )
-            },
-            popExitTransition = {
-                fadeOut(tween(400)) + scaleOut(
-                    tween(400, easing = EaseInCubic),
-                    targetScale = 0.92f
-                )
-            }
+            arguments = listOf(navArgument("videoId") { type = NavType.LongType })
         ) { backStackEntry ->
             val videoId = backStackEntry.arguments?.getLong("videoId") ?: 0L
             PlayerScreen(

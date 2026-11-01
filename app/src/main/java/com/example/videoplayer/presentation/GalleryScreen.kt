@@ -11,13 +11,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,11 +28,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -104,9 +102,7 @@ fun GalleryScreen(
                 viewModel.sortOption = GallerySortOption.SIZE_DESC
                 selectedTab = GalleryTab.ALL_VIDEOS
             }
-            null -> {
-                // Keep existing or default
-            }
+            null -> {}
             else -> {
                 viewModel.quickFilter = QuickFilterMode.ALL
                 viewModel.selectedFolderName = initialMode
@@ -116,59 +112,31 @@ fun GalleryScreen(
     }
 
     val pageTitle = when {
-        viewModel.quickFilter == QuickFilterMode.RECENT -> "RECENT VIDEOS"
-        viewModel.quickFilter == QuickFilterMode.HD -> "HD CONTENT"
-        viewModel.selectedFolderName != null -> viewModel.selectedFolderName!!.uppercase()
-        else -> "VIDEO GALLERY"
+        viewModel.quickFilter == QuickFilterMode.RECENT -> "Recent Videos"
+        viewModel.quickFilter == QuickFilterMode.HD -> "HD Videos"
+        viewModel.selectedFolderName != null -> viewModel.selectedFolderName!!
+        else -> "Video Gallery"
     }
 
-    val pageSubtitle = when {
-        viewModel.quickFilter == QuickFilterMode.RECENT -> "${viewModel.galleryVideos.size} recently added"
-        viewModel.quickFilter == QuickFilterMode.HD -> "${viewModel.galleryVideos.size} high definition videos"
-        viewModel.selectedFolderName != null -> "${viewModel.galleryVideos.size} items in folder"
-        else -> "${viewModel.galleryVideos.size} videos total"
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(LuxuryBlack)
-    ) {
-        // Ambient background glow
-        Box(
-            modifier = Modifier
-                .size(340.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 100.dp, y = (-50).dp)
-                .blur(110.dp)
-                .background(GoldPrimary.copy(alpha = 0.08f), CircleShape)
-        )
-        Box(
-            modifier = Modifier
-                .size(260.dp)
-                .align(Alignment.BottomStart)
-                .offset(x = (-80).dp, y = 50.dp)
-                .blur(90.dp)
-                .background(GoldDark.copy(alpha = 0.05f), CircleShape)
-        )
-
-        Column(modifier = Modifier.fillMaxSize()) {
-
-            /* ── Top Bar ── */
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(LuxuryDarkSurface, Color.Transparent)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = pageTitle,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            style = MaterialTheme.typography.titleLarge
                         )
-                    )
-                    .padding(top = 48.dp, bottom = 12.dp, start = 8.dp, end = 16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                        Text(
+                            text = "${viewModel.galleryVideos.size} items",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                },
+                navigationIcon = {
                     IconButton(onClick = {
                         if (viewModel.selectedFolderName != null || viewModel.quickFilter != QuickFilterMode.ALL) {
                             viewModel.selectedFolderName = null
@@ -177,264 +145,150 @@ fun GalleryScreen(
                             navController.navigateUp()
                         }
                     }) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .background(GoldSubtle, CircleShape)
-                                .border(1.dp, GoldPrimary.copy(0.3f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = GoldPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = pageTitle,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = PlatinumLight,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 2.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = pageSubtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GoldPrimary.copy(0.85f)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = TextPrimary
                         )
                     }
-
-                    // Search Toggle
+                },
+                actions = {
                     IconButton(onClick = { isSearchActive = !isSearchActive }) {
                         Icon(
                             imageVector = if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = if (isSearchActive) GoldLight else PlatinumMid
+                            tint = TextPrimary
                         )
                     }
-
-                    // Sort Menu Button
                     Box {
                         IconButton(onClick = { showSortMenu = true }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Sort,
                                 contentDescription = "Sort",
-                                tint = PlatinumMid
+                                tint = TextPrimary
                             )
                         }
-
                         DropdownMenu(
                             expanded = showSortMenu,
                             onDismissRequest = { showSortMenu = false },
-                            modifier = Modifier
-                                .background(LuxuryCardSurface)
-                                .border(1.dp, GoldSubtle, RoundedCornerShape(12.dp))
+                            modifier = Modifier.background(AppSurfaceCard)
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Newest First", color = PlatinumLight) },
+                                text = { Text("Newest First", color = TextPrimary) },
                                 onClick = {
                                     viewModel.sortOption = GallerySortOption.DATE_DESC
                                     showSortMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.AccessTime, null, tint = GoldPrimary)
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Oldest First", color = PlatinumLight) },
+                                text = { Text("Oldest First", color = TextPrimary) },
                                 onClick = {
                                     viewModel.sortOption = GallerySortOption.DATE_ASC
                                     showSortMenu = false
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Name (A to Z)", color = PlatinumLight) },
+                                text = { Text("Name (A to Z)", color = TextPrimary) },
                                 onClick = {
                                     viewModel.sortOption = GallerySortOption.NAME_ASC
                                     showSortMenu = false
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Largest Size", color = PlatinumLight) },
+                                text = { Text("Largest Size", color = TextPrimary) },
                                 onClick = {
                                     viewModel.sortOption = GallerySortOption.SIZE_DESC
                                     showSortMenu = false
                                 }
                             )
-                            DropdownMenuItem(
-                                text = { Text("Longest Duration", color = PlatinumLight) },
-                                onClick = {
-                                    viewModel.sortOption = GallerySortOption.DURATION_DESC
-                                    showSortMenu = false
-                                }
-                            )
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppSurface)
+            )
+        },
+        containerColor = AppBackground
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
 
-                // Gold Accent line
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(Color.Transparent, GoldPrimary.copy(0.35f), Color.Transparent)
-                            )
-                        )
-                )
-            }
-
-            /* ── Search Bar Animated ── */
+            // Search Bar
             AnimatedVisibility(
                 visible = isSearchActive,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
-                Box(
+                OutlinedTextField(
+                    value = viewModel.searchQuery,
+                    onValueChange = { viewModel.searchQuery = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = viewModel.searchQuery,
-                        onValueChange = { viewModel.searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search videos…", color = PlatinumDark) },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = GoldPrimary,
-                            unfocusedBorderColor = GlassBorder,
-                            focusedContainerColor = LuxuryCardSurface,
-                            unfocusedContainerColor = LuxuryCardSurface,
-                            focusedTextColor = PlatinumLight,
-                            unfocusedTextColor = PlatinumLight,
-                            cursorColor = GoldPrimary
-                        ),
-                        shape = RoundedCornerShape(16.dp),
-                        trailingIcon = {
-                            if (viewModel.searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.searchQuery = "" }) {
-                                    Icon(Icons.Default.Close, null, tint = PlatinumMid)
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-
-            /* ── Filter Chip Banner (Folder / Recent / HD) ── */
-            if (viewModel.selectedFolderName != null || viewModel.quickFilter != QuickFilterMode.ALL) {
-                val bannerLabel = when {
-                    viewModel.quickFilter == QuickFilterMode.RECENT -> "Filter: Recent Videos"
-                    viewModel.quickFilter == QuickFilterMode.HD -> "Filter: HD Content"
-                    else -> "Folder: ${viewModel.selectedFolderName}"
-                }
-                val bannerIcon = when {
-                    viewModel.quickFilter == QuickFilterMode.RECENT -> Icons.Default.AccessTime
-                    viewModel.quickFilter == QuickFilterMode.HD -> Icons.Default.Hd
-                    else -> Icons.Default.Folder
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(GoldSubtle, RoundedCornerShape(20.dp))
-                            .border(1.dp, GoldPrimary.copy(0.4f), RoundedCornerShape(20.dp))
-                            .padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                bannerIcon,
-                                contentDescription = null,
-                                tint = GoldPrimary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = bannerLabel,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = GoldLight
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            IconButton(
-                                onClick = {
-                                    viewModel.selectedFolderName = null
-                                    viewModel.quickFilter = QuickFilterMode.ALL
-                                },
-                                modifier = Modifier.size(20.dp)
-                            ) {
-                                Icon(Icons.Default.Close, null, tint = GoldPrimary, modifier = Modifier.size(14.dp))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("Search videos...", color = TextMuted) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryColor,
+                        unfocusedBorderColor = BorderColor,
+                        focusedContainerColor = AppSurfaceCard,
+                        unfocusedContainerColor = AppSurfaceCard,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    trailingIcon = {
+                        if (viewModel.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.searchQuery = "" }) {
+                                Icon(Icons.Default.Close, null, tint = TextSecondary)
                             }
                         }
                     }
-                }
+                )
             }
 
-            /* ── Tab Switcher: "All Videos" vs "Folders / Albums" ── */
+            // Tab Switcher
             if (viewModel.selectedFolderName == null && viewModel.quickFilter == QuickFilterMode.ALL) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
-                        .background(LuxuryCardSurface, RoundedCornerShape(16.dp))
-                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                PrimaryTabRow(
+                    selectedTabIndex = selectedTab.ordinal,
+                    containerColor = AppSurface,
+                    contentColor = PrimaryColor
                 ) {
-                    GalleryTabButton(
-                        title = "All Videos (${viewModel.localVideos.size})",
-                        icon = Icons.Default.GridView,
-                        isSelected = selectedTab == GalleryTab.ALL_VIDEOS,
+                    Tab(
+                        selected = selectedTab == GalleryTab.ALL_VIDEOS,
                         onClick = { selectedTab = GalleryTab.ALL_VIDEOS },
-                        modifier = Modifier.weight(1f)
+                        text = { Text("Videos (${viewModel.localVideos.size})", fontWeight = FontWeight.SemiBold) }
                     )
-                    GalleryTabButton(
-                        title = "Albums (${viewModel.videoFolders.size})",
-                        icon = Icons.Default.FolderShared,
-                        isSelected = selectedTab == GalleryTab.FOLDERS,
+                    Tab(
+                        selected = selectedTab == GalleryTab.FOLDERS,
                         onClick = { selectedTab = GalleryTab.FOLDERS },
-                        modifier = Modifier.weight(1f)
+                        text = { Text("Albums (${viewModel.videoFolders.size})", fontWeight = FontWeight.SemiBold) }
                     )
                 }
             }
 
-            /* ── Gallery Content ── */
+            // Gallery Grid
             when {
                 viewModel.isLoading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = GoldPrimary)
+                        CircularProgressIndicator(color = PrimaryColor)
                     }
                 }
                 selectedTab == GalleryTab.ALL_VIDEOS || viewModel.selectedFolderName != null || viewModel.quickFilter != QuickFilterMode.ALL -> {
                     if (viewModel.galleryVideos.isEmpty()) {
-                        EmptyGalleryState(message = if (viewModel.searchQuery.isNotBlank()) "No matching videos" else "No videos in gallery")
+                        EmptyState(message = if (viewModel.searchQuery.isNotBlank()) "No matching videos found" else "No videos in gallery")
                     } else {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                            contentPadding = PaddingValues(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            itemsIndexed(viewModel.galleryVideos) { index, video ->
+                            items(viewModel.galleryVideos) { video ->
                                 GalleryVideoCard(
                                     video = video,
-                                    index = index,
                                     onClick = { navController.navigate("player/${video.id}") },
                                     onDelete = { videoToDelete = video }
                                 )
@@ -444,19 +298,18 @@ fun GalleryScreen(
                 }
                 selectedTab == GalleryTab.FOLDERS -> {
                     if (viewModel.videoFolders.isEmpty()) {
-                        EmptyGalleryState(message = "No albums found")
+                        EmptyState(message = "No albums found")
                     } else {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                            contentPadding = PaddingValues(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            itemsIndexed(viewModel.videoFolders) { index, folder ->
+                            items(viewModel.videoFolders) { folder ->
                                 GalleryFolderCard(
                                     folder = folder,
-                                    index = index,
                                     onClick = {
                                         viewModel.selectedFolderName = folder.name
                                         selectedTab = GalleryTab.ALL_VIDEOS
@@ -470,20 +323,20 @@ fun GalleryScreen(
         }
     }
 
-    /* ── Delete Confirmation Dialog ── */
+    // Delete Dialog
     videoToDelete?.let { video ->
         AlertDialog(
             onDismissRequest = { videoToDelete = null },
-            containerColor = LuxuryCardSurface,
-            shape = RoundedCornerShape(24.dp),
+            containerColor = AppSurfaceCard,
+            shape = RoundedCornerShape(16.dp),
             title = {
-                Text("Delete Video", style = MaterialTheme.typography.titleLarge, color = PlatinumLight)
+                Text("Delete Video", color = TextPrimary, fontWeight = FontWeight.Bold)
             },
             text = {
                 Text(
-                    "Are you sure you want to delete \"${video.title}\"? This action cannot be undone.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PlatinumMid
+                    "Are you sure you want to delete \"${video.title}\"?",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
@@ -514,62 +367,16 @@ fun GalleryScreen(
             },
             dismissButton = {
                 TextButton(onClick = { videoToDelete = null }) {
-                    Text("Cancel", color = PlatinumMid)
+                    Text("Cancel", color = TextSecondary)
                 }
             }
         )
     }
 }
 
-/* ── Tab Switch Button ── */
-@Composable
-private fun GalleryTabButton(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val bgBrush = if (isSelected) {
-        Brush.horizontalGradient(listOf(GoldDark, GoldPrimary))
-    } else {
-        Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(bgBrush)
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = if (isSelected) LuxuryBlack else PlatinumMid
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) LuxuryBlack else PlatinumMid
-            )
-        }
-    }
-}
-
-/* ── 2-Column Luxury Video Card ── */
 @Composable
 private fun GalleryVideoCard(
     video: LocalVideo,
-    index: Int,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -595,54 +402,21 @@ private fun GalleryVideoCard(
         thumbnail = bmp
     }
 
-    val alpha = remember { Animatable(0f) }
-    val offset = remember { Animatable(30f) }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay((index * 40L).coerceAtMost(300L))
-        alpha.animateTo(1f, tween(350))
-        offset.animateTo(0f, tween(350, easing = EaseOutCubic))
-    }
-
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        if (isPressed) 0.95f else 1f,
-        spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "gridScale"
-    )
-
-    Box(
+    Card(
         modifier = Modifier
-            .alpha(alpha.value)
-            .offset(y = offset.value.dp)
-            .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(Color(0xFF161100), Color(0xFF0E0C00))
-                )
-            )
-            .border(
-                1.dp,
-                Brush.linearGradient(
-                    listOf(GoldPrimary.copy(0.4f), GoldPrimary.copy(0.08f), GoldPrimary.copy(0.2f))
-                ),
-                RoundedCornerShape(16.dp)
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = AppSurfaceCard),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-
-            // Thumbnail container (aspect 16:10)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(115.dp)
-                    .background(LuxuryElevated),
+                    .height(110.dp)
+                    .background(AppSurface),
                 contentAlignment = Alignment.Center
             ) {
                 if (thumbnail != null) {
@@ -652,72 +426,43 @@ private fun GalleryVideoCard(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
-                    // Gradient scrim
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color.Black.copy(0.7f))
-                                )
-                            )
-                    )
                 } else {
                     Icon(
                         Icons.Default.PlayCircle,
                         contentDescription = null,
                         modifier = Modifier.size(32.dp),
-                        tint = GoldPrimary.copy(0.4f)
+                        tint = TextMuted
                     )
                 }
 
-                // Play icon badge in center
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color.Black.copy(0.45f), CircleShape)
-                        .border(1.dp, GoldPrimary.copy(0.6f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = GoldPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                // Duration badge bottom-right
                 if (video.duration > 0) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(6.dp)
-                            .background(Color.Black.copy(0.85f), RoundedCornerShape(4.dp))
-                            .border(0.5.dp, GoldSubtle, RoundedCornerShape(4.dp))
+                            .background(Color.Black.copy(0.75f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 5.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = formatDuration(video.duration),
                             style = MaterialTheme.typography.labelSmall,
-                            color = PlatinumLight,
+                            color = TextPrimary,
                             fontSize = 10.sp
                         )
                     }
                 }
             }
 
-            // Info section
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 10.dp)
+                    .padding(10.dp)
             ) {
                 Text(
                     text = video.title.removeSuffix(".mp4").removeSuffix(".mkv").removeSuffix(".avi"),
                     style = MaterialTheme.typography.titleSmall,
-                    color = PlatinumLight,
-                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -732,18 +477,18 @@ private fun GalleryVideoCard(
                     Text(
                         text = formatFileSize(video.size),
                         style = MaterialTheme.typography.labelSmall,
-                        color = PlatinumDark,
+                        color = TextSecondary,
                         fontSize = 11.sp
                     )
 
                     IconButton(
                         onClick = onDelete,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     ) {
                         Icon(
-                            Icons.Default.DeleteOutline,
+                            Icons.Default.Delete,
                             contentDescription = "Delete",
-                            tint = ErrorRed.copy(0.7f),
+                            tint = TextMuted,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -753,11 +498,9 @@ private fun GalleryVideoCard(
     }
 }
 
-/* ── Luxury Folder / Album Card ── */
 @Composable
 private fun GalleryFolderCard(
     folder: VideoFolder,
-    index: Int,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -784,54 +527,21 @@ private fun GalleryFolderCard(
         }
     }
 
-    val alpha = remember { Animatable(0f) }
-    val offset = remember { Animatable(30f) }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay((index * 40L).coerceAtMost(300L))
-        alpha.animateTo(1f, tween(350))
-        offset.animateTo(0f, tween(350, easing = EaseOutCubic))
-    }
-
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        if (isPressed) 0.95f else 1f,
-        spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "folderScale"
-    )
-
-    Box(
+    Card(
         modifier = Modifier
-            .alpha(alpha.value)
-            .offset(y = offset.value.dp)
-            .scale(scale)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(Color(0xFF181503), Color(0xFF100E02))
-                )
-            )
-            .border(
-                1.dp,
-                Brush.linearGradient(
-                    listOf(GoldPrimary.copy(0.5f), Color.Transparent, GoldPrimary.copy(0.3f))
-                ),
-                RoundedCornerShape(18.dp)
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = AppSurfaceCard),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-
-            // Album preview thumbnail
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(115.dp)
-                    .background(LuxuryElevated),
+                    .height(110.dp)
+                    .background(AppSurface),
                 contentAlignment = Alignment.Center
             ) {
                 if (thumbnail != null) {
@@ -841,119 +551,79 @@ private fun GalleryFolderCard(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color.Black.copy(0.75f))
-                                )
-                            )
-                    )
                 } else {
                     Icon(
                         Icons.Default.Folder,
                         contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = GoldPrimary.copy(0.5f)
+                        modifier = Modifier.size(36.dp),
+                        tint = TextMuted
                     )
                 }
 
-                // Folder icon floating badge
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .size(32.dp)
-                        .background(LuxuryBlack.copy(0.75f), CircleShape)
-                        .border(1.dp, GoldPrimary.copy(0.5f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Folder,
-                        contentDescription = null,
-                        tint = GoldPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-
-                // Video count badge
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .background(GoldSubtle, RoundedCornerShape(6.dp))
-                        .border(0.5.dp, GoldPrimary.copy(0.6f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(6.dp)
+                        .background(Color.Black.copy(0.75f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = "${folder.videoCount} videos",
                         style = MaterialTheme.typography.labelSmall,
-                        color = GoldLight,
-                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
                         fontSize = 10.sp
                     )
                 }
             }
 
-            // Folder details
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .padding(10.dp)
             ) {
                 Text(
                     text = folder.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = PlatinumLight,
+                    color = TextPrimary,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = formatFileSize(folder.totalSize),
                     style = MaterialTheme.typography.labelSmall,
-                    color = PlatinumDark
+                    color = TextSecondary
                 )
             }
         }
     }
 }
 
-/* ── Empty Gallery State ── */
 @Composable
-private fun EmptyGalleryState(message: String) {
+private fun EmptyState(message: String) {
     Box(
         Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                Modifier
-                    .size(80.dp)
-                    .background(GoldSubtle, CircleShape)
-                    .border(1.dp, GoldPrimary.copy(0.3f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.PermMedia,
-                    contentDescription = null,
-                    modifier = Modifier.size(38.dp),
-                    tint = GoldPrimary.copy(0.6f)
-                )
-            }
-            Spacer(Modifier.height(16.dp))
+            Icon(
+                Icons.Default.PermMedia,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = TextMuted
+            )
+            Spacer(Modifier.height(12.dp))
             Text(
                 message,
                 style = MaterialTheme.typography.titleMedium,
-                color = PlatinumLight
+                color = TextPrimary
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
-                "Add videos to your device to view them in the gallery",
+                "No media available in this folder",
                 style = MaterialTheme.typography.bodySmall,
-                color = PlatinumDark,
+                color = TextMuted,
                 textAlign = TextAlign.Center
             )
         }
